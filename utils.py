@@ -105,6 +105,7 @@ train_transform = transforms.Compose([
     GaussianBlur(kernel_size=int(0.1 * 32)),
     transforms.ToTensor(),
     transforms.Normalize([0.4914, 0.4822, 0.4465], [0.2023, 0.1994, 0.2010])])
+#train_transform.transforms.insert(0, RandAugment(1, 10))
 
 test_transform = transforms.Compose([
     transforms.ToTensor(),
@@ -113,15 +114,15 @@ test_transform = transforms.Compose([
 def get_dataset(dataset_name, root='../data', pair=True):
     if pair:
         if dataset_name=='cifar10':
-            train_data = CIFAR10Pair(root=root, train=True, transform=train_transform)
+            train_data = CIFAR10Pair(root=root, train=True, transform=train_transform, download=True)
             memory_data = CIFAR10Pair(root=root, train=True, transform=test_transform)
             test_data = CIFAR10Pair(root=root, train=False, transform=test_transform)
         elif dataset_name=='cifar100':
-            train_data = CIFAR100Pair(root=root, train=True, transform=train_transform)
+            train_data = CIFAR100Pair(root=root, train=True, transform=train_transform, download=True)
             memory_data = CIFAR100Pair(root=root, train=True, transform=test_transform)
             test_data = CIFAR100Pair(root=root, train=False, transform=test_transform)
         elif dataset_name=='stl10':
-            train_data = STL10Pair(root=root, split='train+unlabeled', transform=train_transform)
+            train_data = STL10Pair(root=root, split='train+unlabeled', transform=train_transform, download=True)
             memory_data = STL10Pair(root=root, split='train', transform=test_transform)
             test_data = STL10Pair(root=root, split='test', transform=test_transform)
         elif dataset_name=='cifar100_true_label':

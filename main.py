@@ -10,8 +10,6 @@ import torch.nn.functional as F
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 import ot
-from sklearn.utils.graph_shortest_path import graph_shortest_path
-
 import utils
 from model import Model
 import warnings
@@ -41,11 +39,11 @@ def get_neg_mask(batch_size):
     negative_mask = 1-postive_mask
     return negative_mask.to(device)
 
+
 def cost_fun(out_1, out_2):
     x = out_1[0].unsqueeze(0)
     y = out_2[0].unsqueeze(1)
     cost = torch.sum(torch.abs(x-y)**2,2)
-    #cost = -torch.sum(x * y,2)
     batch_size = out_1[0].shape[0]
     postive_mask = torch.zeros((batch_size, batch_size)).to(device)
     half_batch_size = int(batch_size/2)
@@ -57,49 +55,62 @@ def cost_fun(out_1, out_2):
     cost = cost + postive_mask
     return cost.reshape((1, cost.shape[0], cost.shape[1]))
     
-        
-def rub_con_exp(out_1,out_2,batch_size, epoch, reg, tau_plus):
+def new_cost_fun(out_1, out_2, kappa):
+    x = out_1[0].unsqueeze(0)
+    y = out_2[0].unsqueeze(1)
+    cost = torch.exp(torch.sum(torch.abs(x-y)**2,2)-kappa)
+    batch_size = out_1[0].shape[0]
+    postive_mask = torch.zeros((batch_size, batch_size)).to(device)
+    half_batch_size = int(batch_size/2)
+    for i in range(half_batch_size):
+        postive_mask[i, i] = float("Inf")
+        postive_mask[i, i + half_batch_size] = float("Inf")
+        postive_mask[i + half_batch_size, i] = float("Inf")
+        postive_mask[i + half_batch_size, i + half_batch_size] = float("Inf")
+    cost = cost + postive_mask
+    return cost.reshape((1, cost.shape[0], cost.shape[1]))
+    
+def OT_hard(out_1,out_2,batch_size, epoch, reg, tau_plus, kappa, new_cost):
         # neg score
         N = batch_size*2 - 2
         
         out = torch.cat([out_1, out_2], dim=0)
+        X = out.cpu().detach().numpy()
         neg = torch.exp(torch.mm(out, out.t().contiguous()) / temperature)
-        x = out.unsqueeze(0)
-        y = out.unsqueeze(1)
-        cost_test = torch.sum(torch.abs(x-y)**2,2)
         neg_mask = get_neg_mask(batch_size)
         neg_masked = neg * neg_mask
-        
-        pos = torch.exp(torch.sum(out_1 * out_2, dim=-1) / temperature)
-        pos = torch.cat([pos, pos], dim=0)
-        
-        M = cost_fun([out], [out])
-        
-        a = np.ones(batch_size*2)/(batch_size*2)
-        Trans = ot.sinkhorn(a, a, M.cpu().detach().numpy()[0], reg)
-        Trans = torch.tensor(Trans).cuda()   
-        neg = neg_masked * Trans
-        print("pos", float(torch.sum(out_1 * out_2)), "w2", float((cost_test*Trans).sum()), float(Trans.sum()))
-        
-        
-        neg_2 = torch.sum(neg, 1)*batch_size*2*N
-        Ng = (-tau_plus * N * pos + neg_2) / (1 - tau_plus)
-        Ng = torch.clamp(Ng, min = N * np.e**(-1 / temperature))
+        if reg > 0:
+            pos = torch.exp(torch.sum(out_1 * out_2, dim=-1) / temperature)
+            pos = torch.cat([pos, pos], dim=0)
+            
+            if new_cost:
+                M = new_cost_fun([out], [out], kappa)
+            else:
+                M = cost_fun([out], [out])
+                
+            a = np.ones(batch_size*2)/(batch_size*2)
+            Trans = ot.sinkhorn(a, a, M.cpu().detach().numpy()[0], reg)
+            Trans = torch.tensor(Trans).cuda()   
+            neg = neg_masked * Trans
+            
+            neg_2 = torch.sum(neg, 1)*batch_size*2*N
+            Ng = (-tau_plus * N * pos + neg_2) / (1 - tau_plus)
+            Ng = torch.clamp(Ng, min = N * np.e**(-1 / temperature))
+        else:
+            Ng = neg.sum(dim=-1)
 
         loss = (- torch.log(pos / (pos + Ng))).mean()
         return loss
-        
 
-def train(net, data_loader, train_optimizer, temperature, estimator, tau_plus, beta, reg, reg_unbalance, dataset_name):
+
+def train(net, data_loader, train_optimizer, temperature, estimator, tau_plus, reg, kappa, new_cost):
     net.train()
     total_loss, total_num, train_bar = 0.0, 0, tqdm(data_loader)
     for pos_1, pos_2, target in train_bar:
         pos_1, pos_2 = pos_1.to(device,non_blocking=True), pos_2.to(device,non_blocking=True)
-        #print(pos_1)
         feature_1, out_1 = net(pos_1)
         feature_2, out_2 = net(pos_2)
-
-        loss = rub_con_exp(out_1,out_2,batch_size, epoch, reg, tau_plus)
+        loss = OT_hard(out_1,out_2,batch_size, epoch, reg, tau_plus, kappa, new_cost)
 
         train_optimizer.zero_grad()
         loss.backward()
@@ -112,8 +123,9 @@ def train(net, data_loader, train_optimizer, temperature, estimator, tau_plus, b
 
     return total_loss / total_num
 
+
 # test for one epoch, use weighted knn to find the most similar images' label to assign the test image
-def test(net, memory_data_loader, test_data_loader, reg, reg_unbalance, dataset_name, estimator, tau):
+def test(net, memory_data_loader, test_data_loader, reg, dataset_name, estimator, tau):
     net.eval()
     total_top1, total_top5, total_num, feature_bank = 0.0, 0.0, 0, []
     with torch.no_grad():
@@ -158,7 +170,7 @@ def test(net, memory_data_loader, test_data_loader, reg, reg_unbalance, dataset_
             top[epoch][0] = float(total_top1 / total_num * 100)
             top[epoch][1] = float(total_top5 / total_num * 100)
             print(epoch, epochs, 'total_top1', total_top1, total_num, total_top1 / total_num * 100, 'total_top5', total_top5, total_top5 / total_num * 100)
-            np.save(dataset_name+estimator+"reg"+str(reg)+"_unbalanced_"+str(reg_unbalance)+"tau"+str(tau)+".npy", top)
+            #np.save(dataset_name+estimator+"reg"+str(reg)+"_unbalanced_"+str(reg_unbalance)+"tau"+str(tau)+".npy", top)
             test_bar.set_description('KNN Test Epoch: [{}/{}] Acc@1:{:.2f}% Acc@5:{:.2f}%'
                                      .format(epoch, epochs, total_top1 / total_num * 100, total_top5 / total_num * 100))
             
@@ -176,27 +188,19 @@ if __name__ == '__main__':
     parser.add_argument('--epochs', default=400, type=int, help='Number of sweeps over the dataset to train')
     parser.add_argument('--estimator', default='entropy_ot', type=str, help='Choose loss function')
     parser.add_argument('--dataset_name', default='cifar100', type=str, help='Choose loss function')
-    parser.add_argument('--beta', default=0.5, type=float, help='Choose loss function')
-    parser.add_argument('--anneal', default=None, type=str, help='Beta annealing')
-    parser.add_argument('--reg', default=0.3, type=float, help='reg')
+    parser.add_argument('--reg', default=0.7, type=float, help='entropy regularization')
+    parser.add_argument('--new_cost', default=False, type=bool, help='Use default cost or not')
+    parser.add_argument('--kappa', default=1, type=float, help='hyper parameter for new cost')
 
     # args parse
     args = parser.parse_args()
     feature_dim, temperature, tau_plus, k = args.feature_dim, args.temperature, args.tau_plus, args.k
-    batch_size, epochs, estimator,reg = args.batch_size, args.epochs,  args.estimator, args.reg
+    batch_size, epochs, estimator, reg = args.batch_size, args.epochs, args.estimator, args.reg
     dataset_name = args.dataset_name
-    estimator = args.estimator
-    beta = args.beta
-    anneal = args.anneal
-    print(dataset_name, "estimator", estimator, "reg", reg, "tau_plus", tau_plus)
+    new_cost, kappa = args.new_cost, args.kappa
 
-    #configuring an adaptive beta if using annealing method
-    if anneal=='down':
-        do_beta_anneal=True
-        n_steps=9
-        betas=iter(np.linspace(beta,0,n_steps))
-    else:
-        do_beta_anneal=False
+    
+
     
     # data prepare
     train_data, memory_data, test_data = utils.get_dataset(dataset_name)
@@ -212,10 +216,9 @@ if __name__ == '__main__':
     optimizer = optim.Adam(model.parameters(), lr=1e-3, weight_decay=1e-6)
     c = len(memory_data.classes)
     print(dataset_name, '# Classes: {}'.format(c))
-    rows = np.zeros((2*batch_size, k_graph)).astype(int)
-    for i in range(k_graph):
-        rows[:,i] = np.arange(2*batch_size).astype(int)
     
+
+    print(dataset_name, "estimator", estimator, 'reg', reg, 'new_cost', new_cost, 'kappa', kappa)
 
     # training loop 
     if not os.path.exists('../results'):
@@ -223,8 +226,8 @@ if __name__ == '__main__':
     if not os.path.exists('../results/{}'.format(dataset_name)):
         os.mkdir('../results/{}'.format(dataset_name))
     for epoch in range(0, epochs + 1):
-        train_loss = train(model, train_loader, optimizer, temperature, estimator, tau_plus, beta, reg, reg_unbalance, dataset_name)
+        train_loss = train(model, train_loader, optimizer, temperature, estimator, tau_plus, reg, kappa, new_cost)
         
-        test_acc_1, test_acc_5 = test(model, memory_loader, test_loader, reg, reg_unbalance, dataset_name, estimator, tau_plus)
-        torch.save(model.state_dict(), '../results/{}/{}_{}_{}_{}_{}_{}_new.pth'.format(dataset_name,dataset_name,estimator,batch_size,tau_plus,reg,k_graph))
+        test_acc_1, test_acc_5 = test(model, memory_loader, test_loader, reg, dataset_name, estimator, tau_plus)
+        torch.save(model.state_dict(), '../results/{}/{}_{}_{}_{}_{}_new.pth'.format(dataset_name,dataset_name,estimator,batch_size,tau_plus,reg))
 
