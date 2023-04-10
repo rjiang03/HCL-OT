@@ -3,9 +3,10 @@
 This is the official code for the paper "Hard Negative Sampling via Regularized Optimal Transport for Contrastive Representation Learning". This repository contains the implementation of [model name] and related experiments described in the paper.
 
 ## Implenment on image dataset
-'''
-python main.py --tau_plus 0.1 --beta 1.0
-'''
+For example, here is how we run the code for dataset "STL10" using entropy OT with regularization parameter $\epsilon = 0.3$
+```
+python main.py --dataset_name "STL10" --reg 0.3 --new_cost True --kappa 1
+```
 
 ## Citation
 
