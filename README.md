@@ -13,14 +13,12 @@
 
 If you find this repo useful for your research, please consider citing the paper:
 
-```bash
+```
 @article{jiang2021hard,
   title={Hard Negative Sampling via Regularized Optimal Transport for Contrastive Representation Learning},
   author={Jiang, Ruijie and Ishwar, Prakash and Aeron, Shuchin},
   journal={arXiv preprint arXiv:2111.03169},
   year={2021}
 }
-
-
-
+```
 For any questions, please contact Ruijie Jiang (Ruijie.Jiang@tufts.edu)
