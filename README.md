@@ -1,6 +1,6 @@
 # Hard-Negative-Sampling-via-Regularized-Optimal-Transport-for-Contrastive-Representation-Learning
 
-[Your Project Title] is the accompanying code for the paper "[Your Paper Title]" by [Author(s)]. This repository contains the implementation of [model name] and related experiments described in the paper.
+This is the official code for the paper "Hard Negative Sampling via Regularized Optimal Transport for Contrastive Representation Learning". This repository contains the implementation of [model name] and related experiments described in the paper.
 
 ## Table of Contents
 - [Installation](#installation)
@@ -22,3 +22,7 @@ If you find this repo useful for your research, please consider citing the paper
 }
 ```
 For any questions, please contact Ruijie Jiang (Ruijie.Jiang@tufts.edu)
+
+## Acknowledgements
+
+Part of this code is inspired by [leftthomas/SimCLR](https://github.com/leftthomas/SimCLR), by [Josh/HCL](https://github.com/joshr17/HCL), and by [fanyun-sun/InfoGraph](https://github.com/fanyun-sun/InfoGraph).
