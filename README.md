@@ -16,11 +16,9 @@
 ```bash
 git clone https://github.com/[your_username]/[repository_name].git
 
-@inproceedings{author2023yourtitle,
-  title={Your Paper Title},
-  author={Author(s)},
-  booktitle={Conference Proceedings},
-  year={2023},
-  publisher={Publisher},
-  pages={xx--yy},
+@article{jiang2021hard,
+  title={Hard Negative Sampling via Regularized Optimal Transport for Contrastive Representation Learning},
+  author={Jiang, Ruijie and Ishwar, Prakash and Aeron, Shuchin},
+  journal={arXiv preprint arXiv:2111.03169},
+  year={2021}
 }
