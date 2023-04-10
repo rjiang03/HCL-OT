@@ -3,7 +3,7 @@
 This is the official code for the paper "Hard Negative Sampling via Regularized Optimal Transport for Contrastive Representation Learning". This repository contains the implementation of HCL-OT and related experiments described in the paper.
 
 ## Implenment on image dataset
-For instance, to run the code on the "STL10" dataset using the entropy Optimal Transport (OT) method with a regularization parameter epsilon of 0.7:
+For instance, to run the code on the "cifar100" dataset using the entropy Optimal Transport (OT) method with a regularization parameter epsilon of 0.7:
 ```
 python main.py --dataset_name "cifar100" --reg 0.7
 ```
