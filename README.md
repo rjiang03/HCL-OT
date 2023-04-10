@@ -11,7 +11,7 @@
 
 ## Installation
 
-1. Clone this repository:
+If you find this repo useful for your research, please consider citing the paper:
 
 ```bash
 @article{jiang2021hard,
@@ -20,3 +20,5 @@
   journal={arXiv preprint arXiv:2111.03169},
   year={2021}
 }
+```bash
+For any questions, please contact Ruijie Jiang (Ruijie.Jiang@tufts.edu)
