@@ -13,7 +13,7 @@
 
 1. Clone this repository:
 
-
+```bash
 @article{jiang2021hard,
   title={Hard Negative Sampling via Regularized Optimal Transport for Contrastive Representation Learning},
   author={Jiang, Ruijie and Ishwar, Prakash and Aeron, Shuchin},
