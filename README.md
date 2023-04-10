@@ -13,8 +13,6 @@
 
 1. Clone this repository:
 
-```bash
-git clone https://github.com/[your_username]/[repository_name].git
 
 @article{jiang2021hard,
   title={Hard Negative Sampling via Regularized Optimal Transport for Contrastive Representation Learning},
