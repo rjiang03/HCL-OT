@@ -24,6 +24,6 @@ If you find this repo useful for your research, please consider citing the paper
 For any questions, please contact Ruijie Jiang (Ruijie.Jiang@tufts.edu)
 
 ## Acknowledgements
-This code is a modification of the official InfoGraph code by [Josh/HCL](https://github.com/joshr17/HCL). All code is the same as from their code except the simple modification on the way do hard negative sampling. We keep all hyper-parameter the same as the one in Josh's code.
+This code is a modified version of the official HCL implementation by [Josh/HCL](https://github.com/joshr17/HCL). The only difference from the original code is a minor alteration in the hard negative sampling approach. To ensure a fair comparison, we have maintained all hyperparameters in Josh's implementation as they were in the original code.
 
 Part of this code is inspired by [leftthomas/SimCLR](https://github.com/leftthomas/SimCLR), by [Josh/HCL](https://github.com/joshr17/HCL), and by [fanyun-sun/InfoGraph](https://github.com/fanyun-sun/InfoGraph).
